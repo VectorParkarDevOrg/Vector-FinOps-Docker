@@ -1,0 +1,12 @@
+{
+    "brand_name": "MyBrand",
+    "logo_svg": "/path/to/logo.svg",
+    "logo_png": "/path/to/logo.png",
+    "logo_white_svg": "/path/to/logo_white.svg",
+    "favicon_ico": "",
+    "live_demo_url": "https://mybrand.com/book-a-call",
+    "brand_url": "https://mybrand.com",
+    "brand_link_text": "MyBrand",
+    "remove_trusted_by": true,
+    "remove_github_popup": true
+}

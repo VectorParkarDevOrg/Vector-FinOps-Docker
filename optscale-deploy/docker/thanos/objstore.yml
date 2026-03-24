@@ -1,0 +1,2 @@
+# Empty objstore — Thanos Receive uses local TSDB only (4h retention).
+# No remote object storage. Sufficient for small/single-node deployments.

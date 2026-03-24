@@ -552,7 +552,7 @@ export const getEditPowerScheduleUrl = (id: string) => EDIT_POWER_SCHEDULE.repla
 // External urls
 export const PRODUCTION = "https://my.optscale.com";
 export const DEMO = "https://demo.optscale.com";
-export const HYSTAX = "https://hystax.com";
+export const HYSTAX = "https://www.parkar.in/vector";
 export const HYSTAX_PRIVACY_POLICY = "https://hystax.com/privacy-policy/";
 
 export const FINOPS = "https://finopsinpractice.org/";

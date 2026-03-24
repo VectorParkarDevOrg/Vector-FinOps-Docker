@@ -6,7 +6,6 @@ import Link from "@mui/material/Link";
 import { useTheme } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useNavigate } from "react-router-dom";
 import anomalyDetectionToAvoidBudgetOverruns from "assets/welcome/anomaly-detection-to-avoid-budget-overruns.svg";
 import cloudResourceUsageCostTransparency from "assets/welcome/cloud-resource-usage-cost-transparency.svg";
 import finopsCloudCostOptimization from "assets/welcome/finops-cloud-cost-optimization.svg";
@@ -14,7 +13,6 @@ import finopsReadinessMaturityAssessment from "assets/welcome/finops-readiness-m
 import geoNetworkTrafficCostMap from "assets/welcome/geo-network-traffic-cost-map.svg";
 import itEnvironmentManagement from "assets/welcome/it-environment-management.svg";
 import Button from "components/Button";
-import CustomersGallery from "components/CustomersGallery";
 import IconLabel from "components/IconLabel";
 import IntegrationsGallery from "components/IntegrationsGallery";
 import Logo from "components/Logo";
@@ -22,12 +20,10 @@ import SubTitle from "components/SubTitle";
 import TopAlertWrapper from "components/TopAlertWrapper";
 import { ALERT_TYPES } from "components/TopAlertWrapper/constants";
 import { useIsDownMediaQuery, useIsUpMediaQuery } from "hooks/useMediaQueries";
-import { HYSTAX, LIVE_DEMO, OPTSCALE_CAPABILITY_QUERY_PARAMETER_NAME } from "urls";
+import { HYSTAX } from "urls";
 import { tag as tagHotjar } from "utils/hotjar";
 import { SPACING_2, SPACING_6, SPACING_1 } from "utils/layouts";
 import { isEven } from "utils/math";
-import { getSearchParams } from "utils/network";
-import { buildQueryParameters } from "utils/strings";
 import useStyles from "./Greeter.styles";
 
 type GreeterProps = {
@@ -94,16 +90,8 @@ const ImagesWithCaptions = () => {
 };
 
 const LiveDemoButton = () => {
-  const navigate = useNavigate();
-
   const onClick = () => {
-    const { [OPTSCALE_CAPABILITY_QUERY_PARAMETER_NAME]: capability } = getSearchParams();
-
-    const url = buildQueryParameters(LIVE_DEMO, [
-      capability ? `${OPTSCALE_CAPABILITY_QUERY_PARAMETER_NAME}=${capability}` : ""
-    ]);
-
-    navigate(url);
+    window.open("https://www.parkar.in/book-a-call", "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -189,7 +177,7 @@ const Greeter = ({ content }: GreeterProps) => {
     {
       key: "customers",
       className: classes.centeredFlexColumnDirection,
-      children: <CustomersGallery />
+      children: null
     },
     {
       key: "integrations",

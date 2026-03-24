@@ -1,0 +1,727 @@
+# Shared environment for every OptScale service
+x-etcd-env: &etcd-env
+  HX_ETCD_HOST: etcd-client
+  HX_ETCD_PORT: "2379"
+
+# Shared restart + network shorthand
+x-svc: &svc
+  networks: [optscale]
+  restart: unless-stopped
+
+networks:
+  optscale:
+    name: optscale
+
+volumes:
+  etcd-data:
+  mariadb-data:
+  mongo-data:
+  clickhouse-data:
+  clickhouse-logs:
+  influxdb-data:
+  minio-data:
+  rabbitmq-data:
+  thanos-receive-data:
+  bi-data:
+  gemini-cache:
+
+services:
+
+  # ============================================================
+  # INFRASTRUCTURE — start first, everything else depends on these
+  # ============================================================
+
+  etcd:
+    <<: *svc
+    image: etcd:local
+    # Add "etcd-client" alias so all services using HX_ETCD_HOST=etcd-client work unchanged
+    networks:
+      optscale:
+        aliases: [etcd-client]
+    environment:
+      INITIAL_CLUSTER_SIZE: "1"
+      SET_NAME: etcd-cluster
+      ETCD_HEARTBEAT_INTERVAL: "500"
+      ETCD_ELECTION_TIMEOUT: "5000"
+    volumes:
+      - etcd-data:/default.etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    mem_limit: 256m
+
+  mariadb:
+    <<: *svc
+    image: mariadb:local
+    environment:
+      MYSQL_ROOT_PASSWORD: my-password-01
+    # Reduced max_connections vs K8s (was 4096 — huge memory waste at idle)
+    command: >
+      --max_connections=256
+      --innodb_file_format=BARRACUDA
+      --innodb_large_prefix=1
+      --innodb_file_per_table=1
+      --wait_timeout=28800
+      --explicit_defaults_for_timestamp=1
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-pmy-password-01"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    mem_limit: 512m
+
+  mongo:
+    <<: *svc
+    image: mongo:local
+    # Bootstrap: start without auth, init replica set + create user, then restart with auth.
+    # The replica set name "mongo" must match what's in the etcd-config mongo URL.
+    entrypoint: bash
+    command:
+      - -c
+      - |
+        set -e
+        DATA=/data/db
+        CFG=/data/configdb
+        mkdir -p $$DATA $$CFG
+
+        echo "[mongo-init] Starting without auth to initialise..."
+        mongod --replSet mongo --bind_ip_all --dbpath $$DATA --port 27017 \
+               --storageEngine wiredTiger --wiredTigerCacheSizeGB 0.25 \
+               --logpath /tmp/mongod-init.log --fork
+
+        echo "[mongo-init] Waiting for mongod to accept connections..."
+        for i in $$(seq 1 60); do
+          mongosh --host 127.0.0.1:27017 --eval "db.adminCommand({ping:1})" --quiet 2>/dev/null && break
+          sleep 2
+        done
+
+        echo "[mongo-init] Initiating replica set..."
+        mongosh --host 127.0.0.1:27017 --quiet --eval "
+          try { rs.status() } catch(e) {
+            rs.initiate({_id:'mongo', members:[{_id:0, host:'mongo:27017'}]})
+          }
+        " || true
+        sleep 5
+
+        echo "[mongo-init] Creating root user (idempotent)..."
+        mongosh --host 127.0.0.1:27017 admin --quiet --eval "
+          try {
+            db.createUser({user:'root', pwd:'SecurePassword-01-02', roles:['root']})
+          } catch(e) { print('User already exists: ' + e) }
+        " || true
+
+        echo "[mongo-init] Stopping init node..."
+        mongosh --host 127.0.0.1:27017 admin --quiet --eval "db.adminCommand({shutdown:1})" || true
+        sleep 3
+
+        echo "[mongo-init] Starting with auth + keyfile..."
+        # Create keyfile if not present
+        if [ ! -f $$CFG/key.txt ]; then
+          echo -n "secureShardingKeyFFFDDa129" > $$CFG/key.txt
+          chmod 400 $$CFG/key.txt
+        fi
+        exec mongod --replSet mongo --auth --keyFile $$CFG/key.txt \
+                    --bind_ip_all --dbpath $$DATA --port 27017 \
+                    --storageEngine wiredTiger --wiredTigerCacheSizeGB 0.25
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - "--host"
+        - "127.0.0.1:27017"
+        - "-u"
+        - "root"
+        - "-p"
+        - "SecurePassword-01-02"
+        - "--authenticationDatabase"
+        - "admin"
+        - "--eval"
+        - "db.adminCommand({ping:1})"
+        - "--quiet"
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 90s
+    mem_limit: 512m
+
+  redis:
+    <<: *svc
+    image: redis:local
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    mem_limit: 128m
+
+  rabbitmq:
+    <<: *svc
+    image: rabbitmq:4.1.4-management-alpine
+    hostname: rabbitmq
+    environment:
+      # Simple standalone node name — no K8s long-name DNS suffix
+      RABBITMQ_NODENAME: rabbit@rabbitmq
+      HOME: /var/lib/rabbitmq
+      RABBITMQ_PLUGINS_EXPAND_DIR: /var/lib/rabbitmq/plugins-expand
+      RABBITMQ_ERLANG_COOKIE: dWkhXehOApH1OHshvByfpfTf3Cd8wwkADei7mWd5JF
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./docker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./docker/rabbitmq-plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./docker/rabbit-definitions.json:/etc/definitions/definitions.json:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+    mem_limit: 256m
+
+  clickhouse:
+    <<: *svc
+    image: clickhouse/clickhouse-server:24.12
+    environment:
+      CLICKHOUSE_SKIP_USER_SETUP: "1"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse/
+      - clickhouse-logs:/var/log/clickhouse-server/
+      - ./docker/clickhouse/config.xml:/etc/clickhouse-server/config.xml:ro
+      - ./docker/clickhouse/users.xml:/etc/clickhouse-server/users.xml:ro
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--password", "secure-password-1-clk", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    mem_limit: 2g
+
+  influxdb:
+    <<: *svc
+    image: influxdb:local
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8086/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    mem_limit: 512m
+
+  minio:
+    <<: *svc
+    image: minio/minio:RELEASE.2020-03-19T21-49-00Z
+    command: server /data
+    environment:
+      MINIO_ACCESS_KEY: optscale-minio
+      MINIO_SECRET_KEY: secret_password
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    mem_limit: 256m
+
+  # ============================================================
+  # CONFIGURATOR — runs once after infra is healthy, then exits.
+  # Writes all config into etcd and creates MariaDB databases.
+  # ============================================================
+
+  configurator:
+    <<: *svc
+    image: configurator:local
+    environment:
+      <<: *etcd-env
+    # Mount the Docker-specific config (correct ports, no K8s :80 service mapping)
+    volumes:
+      - ./docker/etcd-config:/config/config:ro
+    depends_on:
+      etcd:      { condition: service_healthy }
+      mariadb:   { condition: service_healthy }
+      mongo:     { condition: service_healthy }
+      rabbitmq:  { condition: service_healthy }
+      influxdb:  { condition: service_healthy }
+    restart: "no"
+
+  # ============================================================
+  # NGINX — K8s Ingress replacement. Routes all traffic by URL prefix.
+  # ============================================================
+
+  nginx:
+    <<: *svc
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 64m
+
+  # ============================================================
+  # CORE API SERVICES
+  # All read their runtime config (DB creds, peers, etc.) from etcd.
+  # ============================================================
+
+  auth:
+    <<: *svc
+    image: auth:local
+    environment:
+      <<: *etcd-env
+      GOOGLE_OAUTH_CLIENT_ID: ""
+      GOOGLE_OAUTH_CLIENT_SECRET: ""
+      MICROSOFT_OAUTH_CLIENT_ID: ""
+      KEYCLOAK_OAUTH_CLIENT_ID: Vector-FinOps
+      KEYCLOAK_OAUTH_CLIENT_SECRET: jbW4OAryh2BkYR0dpxO5LdakfU21p626
+      KEYCLOAK_SERVER_URL: https://keycloak.telemetrics.tech
+      KEYCLOAK_REALM: VECTOR
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  restapi:
+    <<: *svc
+    image: rest_api:local
+    environment:
+      <<: *etcd-env
+      FAKE_CAD_ENABLED: "0"
+      REQUESTS_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 512m
+
+  keeper:
+    <<: *svc
+    image: keeper:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  heraldapi:
+    <<: *svc
+    image: herald:local
+    environment:
+      <<: *etcd-env
+      HERALD_SERVICE: api
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  heraldengine:
+    <<: *svc
+    image: herald:local
+    environment:
+      <<: *etcd-env
+      HERALD_SERVICE: engine
+    volumes:
+      - /optscale/email_templates:/usr/src/app/herald/modules/email_generator/custom_templates
+      - /optscale/template_filters:/usr/src/app/herald/modules/email_generator/customer_filters
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  insider-api:
+    <<: *svc
+    image: insider_api:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  metroculusapi:
+    <<: *svc
+    image: metroculus_api:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  slacker:
+    <<: *svc
+    image: slacker:local
+    environment:
+      <<: *etcd-env
+      SLACK_SIGNING_SECRET: ""
+      SLACK_CLIENT_ID: ""
+      SLACK_CLIENT_SECRET: ""
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  diproxy:
+    <<: *svc
+    image: diproxy:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  jira-bus:
+    <<: *svc
+    image: jira_bus:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  jira-ui:
+    <<: *svc
+    image: jira_ui:local
+    environment:
+      <<: *etcd-env
+      UI_BUILD_PATH: /usr/src/app/ui
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  kataraapi:
+    <<: *svc
+    image: katara_service:local
+    environment:
+      <<: *etcd-env
+      HX_KATARA_ROLE: api
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  katarascheduler:
+    <<: *svc
+    image: katara_service:local
+    environment:
+      <<: *etcd-env
+      HX_KATARA_ROLE: scheduler
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  bi-exporter:
+    <<: *svc
+    image: bi_exporter:local
+    environment:
+      <<: *etcd-env
+    volumes:
+      - bi-data:/usr/src/app/bi_exporter/bi
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  ngui:
+    <<: *svc
+    image: ngui:local
+    environment:
+      UI_BUILD_PATH: /usr/src/app/ui
+      # Points to nginx which routes /auth, /restapi, etc. to the correct backend
+      PROXY_URL: http://nginx:80
+      VITE_GOOGLE_OAUTH_CLIENT_ID: ""
+      VITE_MICROSOFT_OAUTH_CLIENT_ID: ""
+      VITE_KEYCLOAK_URL: https://keycloak.telemetrics.tech
+      VITE_KEYCLOAK_REALM: VECTOR
+      VITE_KEYCLOAK_CLIENT_ID: Vector-FinOps
+      VITE_ON_INITIALIZE_ORGANIZATION_SETUP_MODE: automatic
+      VITE_FINOPS_IN_PRACTICE_PORTAL_OVERVIEW: ""
+      VITE_BILLING_INTEGRATION: ""
+      VITE_APP_THEME: ""
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 512m
+
+  # ============================================================
+  # WORKERS & SCHEDULERS
+  # ============================================================
+
+  bumischeduler:
+    <<: *svc
+    image: bumischeduler:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  bumiworker:
+    <<: *svc
+    image: bumiworker:local
+    environment:
+      <<: *etcd-env
+      FAKE_CAD_ENABLED: "0"
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  diworker:
+    <<: *svc
+    image: diworker:local
+    environment:
+      <<: *etcd-env
+      FAKE_CAD_ENABLED: "0"
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 512m
+
+  gemini-worker:
+    <<: *svc
+    image: gemini_worker:local
+    environment:
+      <<: *etcd-env
+    volumes:
+      - gemini-cache:/usr/src/app/gemini_worker/cache
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  insider-worker:
+    <<: *svc
+    image: insider_worker:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 512m
+
+  metroculusworker:
+    <<: *svc
+    image: metroculus_worker:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 300m
+
+  risp-worker:
+    <<: *svc
+    image: risp_worker:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 300m
+
+  trapper-worker:
+    <<: *svc
+    image: trapper_worker:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 300m
+
+  kataraworker:
+    <<: *svc
+    image: katara_worker:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  resource-discovery-worker:
+    <<: *svc
+    image: resource_discovery:local
+    environment:
+      <<: *etcd-env
+      FAKE_CAD_ENABLED: "0"
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 512m
+
+  resource-observer-worker:
+    <<: *svc
+    image: resource_observer:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  resource-violations-worker:
+    <<: *svc
+    image: resource_violations:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  booking-observer-worker:
+    <<: *svc
+    image: booking_observer:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  organization-violations-worker:
+    <<: *svc
+    image: organization_violations:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  power-schedule-worker:
+    <<: *svc
+    image: power_schedule:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  calendar-observer-worker:
+    <<: *svc
+    image: calendar_observer:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  live-demo-generator-worker:
+    <<: *svc
+    image: live_demo_generator:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  subspector:
+    <<: *svc
+    image: subspector:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  # ============================================================
+  # EXECUTORS (message consumers that dispatch actions)
+  # ============================================================
+
+  herald-executor:
+    <<: *svc
+    image: herald_executor:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 128m
+
+  keeper-executor:
+    <<: *svc
+    image: keeper_executor:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 128m
+
+  slacker-executor:
+    <<: *svc
+    image: slacker_executor:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 128m
+
+  webhook-executor:
+    <<: *svc
+    image: webhook_executor:local
+    environment:
+      <<: *etcd-env
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 128m
+
+  # ============================================================
+  # MONITORING (Thanos + Grafana)
+  # Thanos Receive collects metrics; Query makes them available to Grafana.
+  # Using local-only TSDB (no remote object store) — 4h retention.
+  # ============================================================
+
+  thanos-receive:
+    <<: *svc
+    image: thanosio/thanos:v0.39.1
+    command:
+      - thanos
+      - receive
+      - --grpc-address=0.0.0.0:10901
+      - --http-address=0.0.0.0:10902
+      - --remote-write.address=0.0.0.0:19291
+      - --objstore.config-file=/var/thanos/config/objstore.yml
+      - --tsdb.path=/var/thanos/receive
+      - --tsdb.retention=4h
+      - --tsdb.wal-compression
+      - --tsdb.no-lockfile
+      - --label=receive="thanos-receive"
+      - --receive.tenant-header=Cloud-Account-Id
+      - --log.level=warn
+    volumes:
+      - thanos-receive-data:/var/thanos/receive
+      - ./docker/thanos/objstore.yml:/var/thanos/config/objstore.yml:ro
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 1g
+
+  thanos-query:
+    <<: *svc
+    image: thanosio/thanos:v0.39.1
+    command:
+      - thanos
+      - query
+      - --grpc-address=0.0.0.0:10901
+      - --http-address=0.0.0.0:10902
+      # Direct service names instead of K8s DNS SRV records
+      - --endpoint=thanos-receive:10901
+      - --log.level=warn
+    depends_on: [thanos-receive]
+    mem_limit: 128m
+
+  grafana:
+    <<: *svc
+    image: grafana:local
+    environment:
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_AUTO_ASSIGN_ORG: "true"
+      GF_USERS_AUTO_ASSIGN_ORG_ROLE: Editor
+      GF_AUTH_PROXY_ENABLED: "true"
+      GF_AUTH_PROXY_HEADER_NAME: X-WEBAUTH-USER
+      GF_AUTH_PROXY_HEADER_PROPERTY: username
+      GF_AUTH_PROXY_AUTO_SIGN_UP: "true"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_AUTH_DISABLE_SIGNOUT_MENU: "true"
+      GF_AUTH_BASIC_ENABLED: "false"
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 256m
+
+  # ============================================================
+  # CRON SCHEDULER — replaces all 25 K8s CronJobs
+  # Needs Docker socket to launch transient job containers.
+  # ============================================================
+
+  ofelia:
+    <<: *svc
+    image: mcuadros/ofelia:latest
+    command: daemon --config /etc/ofelia/ofelia.ini
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./docker/ofelia.ini:/etc/ofelia/ofelia.ini:ro
+    depends_on:
+      configurator: { condition: service_completed_successfully }
+    mem_limit: 64m

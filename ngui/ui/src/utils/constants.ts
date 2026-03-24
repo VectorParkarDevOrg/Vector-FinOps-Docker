@@ -1030,7 +1030,8 @@ export const DATASET_PATH_LENGTH_LIMIT = 70;
 
 export const AUTH_PROVIDERS = Object.freeze({
   GOOGLE: "google",
-  MICROSOFT: "microsoft"
+  MICROSOFT: "microsoft",
+  KEYCLOAK: "keycloak"
 });
 
 export const POWER_SCHEDULE_ACTIONS = Object.freeze({

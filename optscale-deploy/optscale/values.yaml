@@ -499,6 +499,10 @@ clickhouse:
     httpPort: 8123
     externalPort: 9000
   replicas: 1
+  # ClickHouse in-memory cache sizes (bytes). Defaults are tuned for low-memory deployments.
+  # Original hardcoded values were 8GB (uncompressed) and 5GB (mark cache).
+  uncompressed_cache_size: 536870912   # 512MB
+  mark_cache_size: 268435456           # 256MB
 
 zohocrm:
   regapp:

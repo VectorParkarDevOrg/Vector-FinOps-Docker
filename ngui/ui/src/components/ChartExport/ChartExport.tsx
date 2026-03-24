@@ -19,6 +19,7 @@ type FileNameConfig = {
 type ChartExportProps = {
   chartWrapperRef: RefObject<HTMLElement | null>;
   isLoading: boolean;
+  dataTestId?: string;
 };
 
 const defaultConfig: FileNameConfig = {
@@ -37,11 +38,27 @@ const generateFileName = ({ title, fileFormat, withTime }: FileNameConfig): stri
   return fileName + `.${fileFormat}`;
 };
 
-const ChartExport = ({ chartWrapperRef, isLoading }: ChartExportProps) => {
+const ChartExport = ({ chartWrapperRef, isLoading, dataTestId }: ChartExportProps) => {
   const [showAlert, setShowAlert] = useState(false);
 
   const handlerDownloadPng = async () => {
-    const canvases = Array.from(chartWrapperRef.current?.querySelectorAll("canvas") ?? []);
+    let canvases = Array.from(chartWrapperRef.current?.querySelectorAll("canvas") ?? []);
+
+    // Fallback: try to find canvas using data-test-id if ref-based search fails
+    if (isEmptyArray(canvases) && dataTestId) {
+      const wrapper = document.querySelector(`[data-test-id="${dataTestId}"]`);
+      if (wrapper) {
+        canvases = Array.from(wrapper.querySelectorAll("canvas"));
+      }
+    }
+
+    // Final fallback: find the closest parent with canvas
+    if (isEmptyArray(canvases) && chartWrapperRef.current) {
+      const parent = chartWrapperRef.current.closest('[data-test-id]');
+      if (parent) {
+        canvases = Array.from(parent.querySelectorAll("canvas"));
+      }
+    }
 
     if (isEmptyArray(canvases)) {
       setShowAlert(true);

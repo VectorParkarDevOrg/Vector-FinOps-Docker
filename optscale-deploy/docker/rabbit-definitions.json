@@ -1,0 +1,27 @@
+{
+  "vhosts": [
+    { "name": "/" }
+  ],
+  "users": [
+    {
+      "name": "optscale",
+      "password": "secure-password-here",
+      "tags": ["administrator"]
+    }
+  ],
+  "permissions": [
+    { "user": "optscale", "vhost": "/", "configure": ".*", "write": ".*", "read": ".*" }
+  ],
+  "policies": [
+    {
+      "name": "qq-runtime-defaults",
+      "vhost": "/",
+      "pattern": "^(?!amq\\.).*",
+      "apply-to": "quorum_queues",
+      "definition": {
+        "delivery-limit": 100
+      },
+      "priority": 0
+    }
+  ]
+}

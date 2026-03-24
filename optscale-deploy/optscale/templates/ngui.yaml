@@ -66,6 +66,12 @@ spec:
           value: {{ $config.env.google_oauth_client_id }}
         - name: VITE_MICROSOFT_OAUTH_CLIENT_ID
           value: {{ $config.env.microsoft_oauth_client_id }}
+        - name: VITE_KEYCLOAK_URL
+          value: {{ $config.env.keycloak_url | default $config.env.keycloak_oauth_auth_url | default "" }}
+        - name: VITE_KEYCLOAK_REALM
+          value: {{ $config.env.keycloak_realm | default "" }}
+        - name: VITE_KEYCLOAK_CLIENT_ID
+          value: {{ $config.env.keycloak_client_id | default $config.env.keycloak_oauth_client_id | default "" }}
         - name: VITE_GOOGLE_MAP_API_KEY
           value: {{ $config.env.google_map_api_key }}
         - name: VITE_GANALYTICS_ID

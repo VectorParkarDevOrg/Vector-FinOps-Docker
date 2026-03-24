@@ -24,13 +24,19 @@ class SignInAsyncHandler(BaseAsyncCollectionHandler):
             schema:
                 type: object
                 properties:
-                    provider: {type: string, enum: [google, microsoft],
+                    provider: {type: string, enum: [google, microsoft, keycloak],
                         description: "Third party provider to validate token"}
                     token: {type: string,
-                        description: "Third party token"}
+                        description: "Third party token or authorization code"}
                     tenant_id: {type: string, required: false,
                         description: "Azure AD tenant id
                             (only for microsoft provider)"}
+                    redirect_uri: {type: string, required: false,
+                        description: "Redirect URI used in OAuth flow
+                            (required for keycloak provider)"}
+                    code_verifier: {type: string, required: false,
+                        description: "PKCE code verifier
+                            (only for keycloak provider)"}
         responses:
             201:
                 description: Success

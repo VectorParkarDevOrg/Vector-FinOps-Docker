@@ -72,7 +72,7 @@ const ExpensesDailyBreakdownBy = ({
           </Selector>
           <ChartLegendToggle checked={withLegend} onChange={setWithLegend} />
         </Box>
-        <ChartExport chartWrapperRef={chartWrapperRef} isLoading={isLoading} />
+        <ChartExport chartWrapperRef={chartWrapperRef} isLoading={isLoading} dataTestId="expenses_breakdown_chart" />
       </Box>
       <Box>
         <ExpensesDailyBreakdownByBarChart

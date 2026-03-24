@@ -32,6 +32,7 @@ export type MutationSignInArgs = {
   redirectUri?: InputMaybe<Scalars["String"]["input"]>;
   tenantId?: InputMaybe<Scalars["String"]["input"]>;
   token: Scalars["String"]["input"];
+  codeVerifier?: InputMaybe<Scalars["String"]["input"]>;
 };
 
 export type MutationTokenArgs = {
@@ -121,6 +122,7 @@ export type SignInMutationVariables = Exact<{
   token: Scalars["String"]["input"];
   tenantId?: InputMaybe<Scalars["String"]["input"]>;
   redirectUri?: InputMaybe<Scalars["String"]["input"]>;
+  codeVerifier?: InputMaybe<Scalars["String"]["input"]>;
 }>;
 
 export type SignInMutation = {
@@ -279,8 +281,8 @@ export type CreateUserMutationHookResult = ReturnType<typeof useCreateUserMutati
 export type CreateUserMutationResult = Apollo.MutationResult<CreateUserMutation>;
 export type CreateUserMutationOptions = Apollo.BaseMutationOptions<CreateUserMutation, CreateUserMutationVariables>;
 export const SignInDocument = gql`
-  mutation SignIn($provider: String!, $token: String!, $tenantId: String, $redirectUri: String) {
-    signIn(provider: $provider, token: $token, tenantId: $tenantId, redirectUri: $redirectUri) {
+  mutation SignIn($provider: String!, $token: String!, $tenantId: String, $redirectUri: String, $codeVerifier: String) {
+    signIn(provider: $provider, token: $token, tenantId: $tenantId, redirectUri: $redirectUri, codeVerifier: $codeVerifier) {
       token
       user_id
       user_email

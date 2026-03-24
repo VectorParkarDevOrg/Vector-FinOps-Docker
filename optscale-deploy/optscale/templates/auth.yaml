@@ -64,4 +64,12 @@ spec:
           value: {{ $config.google_oauth_client_secret | quote }}
         - name: MICROSOFT_OAUTH_CLIENT_ID
           value: {{ $config.microsoft_oauth_client_id | quote }}
+        - name: KEYCLOAK_OAUTH_CLIENT_ID
+          value: {{ $config.keycloak_oauth_client_id | quote }}
+        - name: KEYCLOAK_OAUTH_CLIENT_SECRET
+          value: {{ $config.keycloak_oauth_client_secret | quote }}
+        - name: KEYCLOAK_SERVER_URL
+          value: {{ $config.keycloak_server_url | quote }}
+        - name: KEYCLOAK_REALM
+          value: {{ $config.keycloak_realm | quote }}
 {{ include "ready_probe" $config | indent 8 }}

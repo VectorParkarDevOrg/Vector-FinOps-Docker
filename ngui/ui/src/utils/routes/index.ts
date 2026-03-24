@@ -39,6 +39,7 @@ import homeRoute from "./homeRoute";
 import initializeRoute from "./initializeRoute";
 import integrationsRoute from "./integrationsRoute";
 import invitedRoute from "./invitedRoute";
+import keycloakCallbackRoute from "./keycloakCallbackRoute";
 import inviteEmployeesRoute from "./inviteEmployeesRoute";
 import k8sRightsizingRoute from "./k8sRightsizingRoute";
 import liveDemoRoute from "./liveDemoRoute";
@@ -128,6 +129,7 @@ export const routes = [
   finOpsPortalRoute,
   settingsRoute,
   homeRoute,
+  keycloakCallbackRoute,
   loginRoute,
   registerRoute,
   invitedRoute,

@@ -89,12 +89,19 @@ auth:
   google_oauth_client_id: ""
   google_oauth_client_secret: ""
   microsoft_oauth_client_id: ""
+  keycloak_oauth_client_id: "Vector-FinOps"
+  keycloak_oauth_client_secret: "jbW4OAryh2BkYR0dpxO5LdakfU21p626"
+  keycloak_server_url: "https://keycloak.telemetrics.tech"
+  keycloak_realm: "VECTOR"
 
 ngui:
   env:
     build_mode: ""
     google_oauth_client_id: ""
     microsoft_oauth_client_id: ""
+    keycloak_url: "https://keycloak.telemetrics.tech"
+    keycloak_realm: "VECTOR"
+    keycloak_client_id: "Vector-FinOps"
     google_map_api_key: ""
     ganalytics_id: ""
     hotjar_id: ""
@@ -165,3 +172,48 @@ stripe:
   enabled: false
   api_key:
   webhook_secret:
+
+# ---- Memory tuning for sub-8GB deployment ----
+
+# Thanos Receive: reduce from 8192MB default to 1024MB
+# This is the single biggest limiter — original value was 8GB cap
+thanos_receive:
+  memory_limit: 1024
+  cpu_limit: 1
+
+# MongoDB: reduce WiredTiger cache from 1.0GB to 256MB
+mongo:
+  cache_size: 0.25
+
+# RabbitMQ: reduce memory limit from 512MB to 256MB
+rabbitmq:
+  memory_limit: 256
+
+# Herald: reduce engine replicas from 2 to 1
+# Email sending does not require 2 workers for low-volume usage
+herald:
+  engine:
+    replicaCount: 1
+
+# Resource discovery: reduce from 2 workers to 1
+# Only needs 2+ if you have many cloud accounts running parallel imports
+resource_discovery:
+  replicaCount: 1
+  memory_limit: 512
+
+# Booking observer: reduce from 2 workers to 1
+booking_observer:
+  replicaCount: 1
+
+# ClickHouse: add Kubernetes resource limits and reduce in-memory caches
+# Original cache config was 8GB uncompressed + 5GB mark cache (hardcoded)
+clickhouse:
+  uncompressed_cache_size: 536870912   # 512MB (was 8GB)
+  mark_cache_size: 268435456           # 256MB (was 5GB)
+  resources:
+    requests:
+      cpu: "0.25"
+      memory: "512Mi"
+    limits:
+      cpu: "2"
+      memory: "2Gi"

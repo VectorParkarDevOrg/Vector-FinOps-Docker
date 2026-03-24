@@ -20,8 +20,8 @@
     <max_connections>4096</max_connections>
     <keep_alive_timeout>3</keep_alive_timeout>
     <max_concurrent_queries>100</max_concurrent_queries>
-    <uncompressed_cache_size>8589934592</uncompressed_cache_size>
-    <mark_cache_size>5368709120</mark_cache_size>
+    <uncompressed_cache_size>{{ printf "%d" (.Values.clickhouse.uncompressed_cache_size | default 536870912 | int64) }}</uncompressed_cache_size>
+    <mark_cache_size>{{ printf "%d" (.Values.clickhouse.mark_cache_size | default 268435456 | int64) }}</mark_cache_size>
     <path>/var/lib/clickhouse/</path>
     <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
     <default_profile>{{ .Values.clickhouse.db.user }}</default_profile>
