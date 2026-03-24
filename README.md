@@ -77,9 +77,55 @@ OptScale is an open source FinOps platform that optimizes cloud costs and perfor
 
 ## Getting started
 
+### Docker Deployment (Recommended)
+
+The fastest way to run Vector FinOps on a single machine — no Kubernetes required.
+
+**Requirements:** 8 GB RAM minimum (10 GB recommended), 40 GB disk, Docker Engine 24+, Ubuntu 22.04/24.04.
+
+```bash
+# 1. Clone the repo
+git clone git@github.com:vivek-vector/VectorFinOps-Docker.git
+cd VectorFinOps-Docker/optscale-deploy
+
+# 2. Pull all service images from Docker Hub (~8-10 GB, one-time)
+chmod +x pull-images.sh
+./pull-images.sh
+
+# 3. Deploy
+docker compose up -d
+
+# 4. Watch startup (takes 3-5 minutes)
+docker compose logs -f configurator   # wait for "exited (0)"
+docker compose ps                     # all services should show "running"
+```
+
+Once all services are up, open `http://<your-server-ip>/` in your browser.
+
+**Useful commands:**
+```bash
+# Stop (data preserved)
+docker compose down
+
+# Full reset including data
+docker compose down -v
+
+# Restart a single service
+docker compose restart auth
+
+# View resource usage
+docker stats
+```
+
+For full details including configuration, passwords, email setup, and troubleshooting see [`documentation/docker_deployment.md`](documentation/docker_deployment.md).
+
+---
+
+### Kubernetes Deployment
+
 The minimum hardware requirements for OptScale cluster: CPU: 8+ cores, RAM: 16Gb, SSD: 150+ Gb.
 
-NVMe SSD is recommended.  
+NVMe SSD is recommended.
 
 **OS Required**: [Ubuntu 24.04](https://releases.ubuntu.com/noble/).
 
