@@ -1,0 +1,13 @@
+apiVersion: 1
+
+datasources:
+- name: InfluxDB
+  type: influxdb
+  access: proxy
+  orgId: 1
+  # Docker: influxdb runs on 8086 directly (K8s ClusterIP was port 80)
+  url: http://influxdb:8086
+  database: metrics
+  isDefault: true
+  version: 1
+  editable: false

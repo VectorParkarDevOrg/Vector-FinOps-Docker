@@ -732,6 +732,9 @@ services:
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
       GF_AUTH_DISABLE_SIGNOUT_MENU: "true"
       GF_AUTH_BASIC_ENABLED: "false"
+    volumes:
+      # Override baked-in datasource.yaml — image has influxdb:80 (K8s), Docker uses 8086
+      - ./docker/grafana/datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml:ro
     depends_on:
       configurator: { condition: service_completed_successfully }
     mem_limit: 256m
