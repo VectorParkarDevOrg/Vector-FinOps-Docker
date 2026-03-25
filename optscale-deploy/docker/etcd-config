@@ -155,6 +155,8 @@ etcd:
   minio:
     host: minio
     port: 9000
+    access: optscale-minio
+    secret: secret_password
   clickhouse:
     host: clickhouse
     port: 8123
