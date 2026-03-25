@@ -1,0 +1,12 @@
+{
+    "brand_name": "Vector",
+    "logo_svg": "ngui/ui/src/assets/logo/logo.svg",
+    "logo_png": "herald/modules/email_generator/images/logo_new.png",
+    "logo_white_svg": "ngui/ui/src/assets/logo/logo_white.svg",
+    "favicon_ico": "ngui/ui/public/favicon.ico",
+    "live_demo_url": "",
+    "brand_url": "https://telemetrics.tech",
+    "brand_link_text": "Vector",
+    "remove_trusted_by": true,
+    "remove_github_popup": true
+}

@@ -45,6 +45,7 @@ REMOVE_GITHUB_POPUP="false"
 DRY_RUN="false"
 SKIP_BUILD="false"
 SKIP_DEPLOY="false"
+DEPLOY_MODE="kubernetes"   # kubernetes | docker
 VERBOSE="false"
 RESTORE_BACKUP=""
 
@@ -233,6 +234,10 @@ parse_args() {
                 ;;
             --skip-deploy)
                 SKIP_DEPLOY="true"
+                shift
+                ;;
+            --docker)
+                DEPLOY_MODE="docker"
                 shift
                 ;;
             -v|--verbose)
@@ -848,6 +853,30 @@ deploy_to_kubernetes() {
     fi
 }
 
+deploy_to_docker() {
+    if [[ "$SKIP_DEPLOY" == "true" ]]; then
+        log_info "Skipping deployment (--skip-deploy)"
+        return
+    fi
+
+    log_step "Deploying to Docker Compose..."
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        log_info "[DRY RUN] Would restart ngui and herald containers"
+        return
+    fi
+
+    local compose_dir="${OPTSCALE_ROOT}/optscale-deploy"
+    if [[ ! -f "${compose_dir}/docker-compose.yml" ]]; then
+        log_error "docker-compose.yml not found at ${compose_dir}"
+        exit 1
+    fi
+
+    cd "$compose_dir"
+    docker compose up -d --no-deps ngui heraldengine heraldapi
+    log_info "ngui and herald containers restarted with new branded images"
+}
+
 #-------------------------------------------------------------------------------
 # Summary Function
 #-------------------------------------------------------------------------------
@@ -907,7 +936,11 @@ main() {
         fi
 
         if [[ "$SKIP_DEPLOY" != "true" ]]; then
-            deploy_to_kubernetes
+            if [[ "$DEPLOY_MODE" == "docker" ]]; then
+                deploy_to_docker
+            else
+                deploy_to_kubernetes
+            fi
         fi
 
         log_info "Restore completed successfully"
@@ -942,7 +975,11 @@ main() {
     update_greeter_component
     remove_github_popup
     build_image
-    deploy_to_kubernetes
+    if [[ "$DEPLOY_MODE" == "docker" ]]; then
+        deploy_to_docker
+    else
+        deploy_to_kubernetes
+    fi
 
     print_summary
 

@@ -11,8 +11,8 @@ databases:
   - "subspector"
 etcd:
   public_ip:
-  company_name: Hystax
-  product_name: OptScale
+  company_name: Vector
+  product_name: Vector FinOps
   encryption_key: fffffxdddeadb33f
   release:
   katara_scheduler_timeout: 3600
