@@ -444,6 +444,12 @@ services:
       UI_BUILD_PATH: /usr/src/app/ui
       # Points to nginx which routes /auth, /restapi, etc. to the correct backend
       PROXY_URL: http://nginx:80
+      # Server-side GraphQL clients use :80 by default (K8s ClusterIP).
+      # In Docker services run on their actual ports — override each one.
+      AUTH_ENDPOINT: http://auth:8905
+      RESTAPI_ENDPOINT: http://restapi:8999
+      KEEPER_ENDPOINT: http://keeper:8973
+      SLACKER_ENDPOINT: http://slacker:80
       VITE_GOOGLE_OAUTH_CLIENT_ID: ""
       VITE_MICROSOFT_OAUTH_CLIENT_ID: ""
       VITE_KEYCLOAK_URL: https://keycloak.telemetrics.tech
