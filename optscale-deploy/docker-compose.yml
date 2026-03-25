@@ -38,15 +38,23 @@ services:
     networks:
       optscale:
         aliases: [etcd-client]
+    # Must pass listen/advertise URLs explicitly — image default binds to localhost only
+    command:
+      - /usr/local/bin/etcd
+      - -listen-client-urls
+      - http://0.0.0.0:2379
+      - -advertise-client-urls
+      - http://0.0.0.0:2379
+      - -data-dir
+      - /default.etcd
     environment:
-      INITIAL_CLUSTER_SIZE: "1"
-      SET_NAME: etcd-cluster
       ETCD_HEARTBEAT_INTERVAL: "500"
       ETCD_ELECTION_TIMEOUT: "5000"
     volumes:
       - etcd-data:/default.etcd
     healthcheck:
-      test: ["CMD", "etcdctl", "endpoint", "health"]
+      # etcdctl v2 API — cluster-health, not endpoint health
+      test: ["CMD", "etcdctl", "--endpoints", "http://127.0.0.1:2379", "cluster-health"]
       interval: 10s
       timeout: 5s
       retries: 15
@@ -78,7 +86,7 @@ services:
     <<: *svc
     image: mongo:local
     # Bootstrap: start without auth, init replica set + create user, then restart with auth.
-    # The replica set name "mongo" must match what's in the etcd-config mongo URL.
+    # mongo:local is MongoDB 3.6 — uses `mongo` shell (not mongosh).
     entrypoint: bash
     command:
       - -c
@@ -88,51 +96,63 @@ services:
         CFG=/data/configdb
         mkdir -p $$DATA $$CFG
 
-        echo "[mongo-init] Starting without auth to initialise..."
-        mongod --replSet mongo --bind_ip_all --dbpath $$DATA --port 27017 \
-               --storageEngine wiredTiger --wiredTigerCacheSizeGB 0.25 \
-               --logpath /tmp/mongod-init.log --fork
-
-        echo "[mongo-init] Waiting for mongod to accept connections..."
-        for i in $$(seq 1 60); do
-          mongosh --host 127.0.0.1:27017 --eval "db.adminCommand({ping:1})" --quiet 2>/dev/null && break
-          sleep 2
-        done
-
-        echo "[mongo-init] Initiating replica set..."
-        mongosh --host 127.0.0.1:27017 --quiet --eval "
-          try { rs.status() } catch(e) {
-            rs.initiate({_id:'mongo', members:[{_id:0, host:'mongo:27017'}]})
-          }
-        " || true
-        sleep 5
-
-        echo "[mongo-init] Creating root user (idempotent)..."
-        mongosh --host 127.0.0.1:27017 admin --quiet --eval "
-          try {
-            db.createUser({user:'root', pwd:'SecurePassword-01-02', roles:['root']})
-          } catch(e) { print('User already exists: ' + e) }
-        " || true
-
-        echo "[mongo-init] Stopping init node..."
-        mongosh --host 127.0.0.1:27017 admin --quiet --eval "db.adminCommand({shutdown:1})" || true
-        sleep 3
-
-        echo "[mongo-init] Starting with auth + keyfile..."
-        # Create keyfile if not present
+        # Create keyfile once
         if [ ! -f $$CFG/key.txt ]; then
           echo -n "secureShardingKeyFFFDDa129" > $$CFG/key.txt
           chmod 400 $$CFG/key.txt
         fi
+
+        # Skip init if already done (admin db exists)
+        if [ -d "$$DATA/admin" ]; then
+          echo "[mongo] Data exists, starting with auth..."
+          exec mongod --replSet mongo --auth --keyFile $$CFG/key.txt \
+                      --bind_ip_all --dbpath $$DATA --port 27017 \
+                      --storageEngine wiredTiger --wiredTigerCacheSizeGB 0.25
+        fi
+
+        echo "[mongo-init] First-time setup, starting without auth..."
+        mongod --replSet mongo --bind_ip_all --dbpath $$DATA --port 27017 \
+               --storageEngine wiredTiger --wiredTigerCacheSizeGB 0.25 &
+        MONGOD_PID=$$!
+
+        echo "[mongo-init] Waiting for mongod..."
+        for i in $$(seq 1 60); do
+          mongo --host 127.0.0.1:27017 --eval "db.adminCommand({ping:1})" --quiet 2>/dev/null && break
+          sleep 2
+        done
+
+        echo "[mongo-init] Initiating replica set..."
+        mongo --host 127.0.0.1:27017 --quiet --eval "
+          var s = rs.status();
+          if (s.ok == 0) {
+            rs.initiate({_id:'mongo', members:[{_id:0, host:'mongo:27017'}]});
+          }
+        " || true
+        sleep 5
+
+        echo "[mongo-init] Creating root user..."
+        mongo --host 127.0.0.1:27017 admin --quiet --eval "
+          try {
+            db.createUser({user:'root', pwd:'SecurePassword-01-02', roles:['root']});
+          } catch(e) { print('User exists or error: ' + e); }
+        " || true
+
+        echo "[mongo-init] Stopping init mongod..."
+        kill $$MONGOD_PID
+        wait $$MONGOD_PID 2>/dev/null || true
+        sleep 2
+
+        echo "[mongo-init] Starting with auth..."
         exec mongod --replSet mongo --auth --keyFile $$CFG/key.txt \
                     --bind_ip_all --dbpath $$DATA --port 27017 \
                     --storageEngine wiredTiger --wiredTigerCacheSizeGB 0.25
     volumes:
       - mongo-data:/data/db
     healthcheck:
+      # mongo:local is MongoDB 3.6 — use `mongo` shell
       test:
         - CMD
-        - mongosh
+        - mongo
         - "--host"
         - "127.0.0.1:27017"
         - "-u"
@@ -147,7 +167,7 @@ services:
       interval: 15s
       timeout: 10s
       retries: 20
-      start_period: 90s
+      start_period: 120s
     mem_limit: 512m
 
   redis:
