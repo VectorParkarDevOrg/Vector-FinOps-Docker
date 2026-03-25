@@ -144,6 +144,9 @@ etcd:
   influxdb:
     host: influxdb
     port: 8086
+    user:
+    pass:
+    database: metrics
   rabbit:
     user: optscale
     pass: secure-password-here
