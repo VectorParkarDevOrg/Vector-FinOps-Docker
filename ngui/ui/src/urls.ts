@@ -550,7 +550,7 @@ export const getPowerScheduleDetailsUrl = (id: string) => POWER_SCHEDULE_DETAILS
 export const getEditPowerScheduleUrl = (id: string) => EDIT_POWER_SCHEDULE.replace(POWER_SCHEDULE_IDENTIFIER, id);
 
 // External urls
-export const PRODUCTION = "https://telemetrics.tech";
+export const PRODUCTION = "https://www.parkar.in/vector";
 export const DEMO = "https://demo.optscale.com";
 export const HYSTAX = "https://www.parkar.in/vector";
 export const HYSTAX_PRIVACY_POLICY = "https://hystax.com/privacy-policy/";
