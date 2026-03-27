@@ -40,6 +40,21 @@ export interface ContextValue {
   };
 }
 
+// Retry fetch once on socket hang-up / connection reset (common with large restapi responses)
+const fetchWithRetry: typeof globalThis.fetch = async (input, init) => {
+  try {
+    return await globalThis.fetch(input, init);
+  } catch (error: unknown) {
+    if (
+      error instanceof Error &&
+      (error.message.includes("socket hang up") || error.message.includes("ECONNRESET"))
+    ) {
+      return await globalThis.fetch(input, init);
+    }
+    throw error;
+  }
+};
+
 const server = new ApolloServer<ContextValue>({
   schema,
   plugins: [ApolloServerPluginDrainHttpServer({ httpServer })]
@@ -66,10 +81,10 @@ app.use(
         // We create new instances of our data sources with each request,
         // passing in our server's cache.
         dataSources: {
-          keeper: new KeeperClient({ cache }, token, "http://keeper"),
-          slacker: new SlackerClient({ cache }, token, "http://slacker"),
-          restapi: new RestApiClient({ cache }, token, "http://restapi"),
-          auth: new AuthClient({ cache }, token, "http://auth")
+          keeper: new KeeperClient({ cache, fetch: fetchWithRetry }, token, "http://keeper"),
+          slacker: new SlackerClient({ cache, fetch: fetchWithRetry }, token, "http://slacker"),
+          restapi: new RestApiClient({ cache, fetch: fetchWithRetry }, token, "http://restapi"),
+          auth: new AuthClient({ cache, fetch: fetchWithRetry }, token, "http://auth")
         }
       };
     }

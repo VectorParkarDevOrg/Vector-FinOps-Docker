@@ -7,7 +7,7 @@ import { PDF_ELEMENTS } from "utils/constants";
 import UbuntuFilePath from "../assets/fonts/Ubuntu-Regular.ttf";
 import logo from "../assets/logo/logo_pdf.png";
 
-const defaultFileName = "optscale-report-%___time___%";
+const defaultFileName = "vector-report-%___time___%";
 let fileName = "";
 let alsoRenderIntoFileName = {}; // pairs of (pdfId, "%patternName%"")
 

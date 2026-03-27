@@ -23,7 +23,7 @@ type ChartExportProps = {
 };
 
 const defaultConfig: FileNameConfig = {
-  title: "OptScale_chart",
+  title: "Vector_chart",
   fileFormat: "png",
   withTime: true
 };
