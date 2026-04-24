@@ -1,0 +1,45 @@
+# Single-container deployment for Vector FinOps
+# Run: docker compose up -d
+# Access: http://localhost:8080
+
+services:
+  vectorfinops:
+    image: vectorfinops:single
+    build:
+      context: ..
+      dockerfile: optscale_single/Dockerfile
+    ports:
+      - "8080:80"
+    volumes:
+      - mongo-data:/data/db
+      - mariadb-data:/var/lib/mysql
+      - influxdb-data:/var/lib/influxdb
+      - minio-data:/opt/minio-data
+      - etcd-data:/default.etcd
+      - rabbitmq-data:/var/lib/rabbitmq
+      - clickhouse-data:/var/lib/clickhouse
+      - optscale-logs:/var/log/optscale
+      # Optional: mount custom email templates
+      # - ./custom_email_templates:/optscale/email_templates
+      # - ./custom_template_filters:/optscale/template_filters
+    restart: unless-stopped
+    # Recommended minimum: 8GB RAM, 4 CPU cores
+    # For production increase these limits
+    # mem_limit: 10g
+    # cpus: 4
+    hostname: vectorfinops
+    environment:
+      - KEYCLOAK_SERVER_URL=
+      - KEYCLOAK_REALM=
+      - KEYCLOAK_OAUTH_CLIENT_ID=
+      - KEYCLOAK_OAUTH_CLIENT_SECRET=
+
+volumes:
+  mongo-data:
+  mariadb-data:
+  influxdb-data:
+  minio-data:
+  etcd-data:
+  rabbitmq-data:
+  clickhouse-data:
+  optscale-logs:

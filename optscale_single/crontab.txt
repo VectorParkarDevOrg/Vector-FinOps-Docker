@@ -1,0 +1,48 @@
+# Vector FinOps scheduled jobs (replaces ofelia in the multi-container setup)
+# All jobs run with HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379
+
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+PYTHONPATH=/usr/src/app
+
+# cleanmongodb: every 3 minutes
+*/3 * * * * root cd /usr/src/app && HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379 python3 docker_images/cleanmongodb/clean-mongo-db.py >> /var/log/optscale/cleanmongodb.log 2>&1
+
+# cleaninfluxdb: weekly (Sunday midnight)
+0 0 * * 0 root cd /usr/src/app && HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379 python docker_images/cleaninfluxdb/clean-influx-db.py >> /var/log/optscale/cleaninfluxdb.log 2>&1
+
+# gemini scheduler: every 5 minutes
+*/5 * * * * root cd /usr/src/app && HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379 uv run --project gemini/gemini_scheduler python -u /usr/src/app/gemini/gemini_scheduler/main.py >> /var/log/optscale/gemini-scheduler.log 2>&1
+
+# bi scheduler: every 5 minutes
+*/5 * * * * root cd /usr/src/app && HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379 python3 docker_images/bi_scheduler/scheduler.py >> /var/log/optscale/bi-scheduler.log 2>&1
+
+# metroculus scheduler: every 30 minutes
+*/30 * * * * root cd /usr/src/app && HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379 uv run --project metroculus/metroculus_scheduler python -u /usr/src/app/metroculus/metroculus_scheduler/main.py >> /var/log/optscale/metroculus-scheduler.log 2>&1
+
+# trapper scheduler: minute 45 of every hour
+45 * * * * root cd /usr/src/app && HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379 uv run --project trapper/trapper_scheduler python -u /usr/src/app/trapper/trapper_scheduler/main.py >> /var/log/optscale/trapper-scheduler.log 2>&1
+
+# risp scheduler: minute 45 of every hour
+45 * * * * root cd /usr/src/app && HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379 uv run --project risp/risp_scheduler python -u /usr/src/app/risp/risp_scheduler/scheduler.py >> /var/log/optscale/risp-scheduler.log 2>&1
+
+# insider scheduler: daily at midnight
+0 0 * * * root cd /usr/src/app && HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379 uv run --project insider/insider_scheduler python -u /usr/src/app/insider/insider_scheduler/main.py >> /var/log/optscale/insider-scheduler.log 2>&1
+
+# calendar observer: hourly
+0 * * * * root cd /usr/src/app && HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379 python3 docker_images/calendar_observer/worker.py >> /var/log/optscale/calendar-observer-sched.log 2>&1
+
+# layout cleaner: daily at 3am
+0 3 * * * root cd /usr/src/app && HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379 python3 docker_images/layout_cleaner/worker.py >> /var/log/optscale/layout-cleaner.log 2>&1
+
+# demo org cleanup: daily at midnight
+0 0 * * * root cd /usr/src/app && HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379 python3 docker_images/demo_org_cleanup/cleanup.py >> /var/log/optscale/demo-org-cleanup.log 2>&1
+
+# live demo generator: hourly
+0 * * * * root cd /usr/src/app && HX_ETCD_HOST=127.0.0.1 HX_ETCD_PORT=2379 python3 docker_images/live_demo_generator/worker.py >> /var/log/optscale/live-demo-generator-sched.log 2>&1
+
+# report imports via REST API
+*/15 * * * * root curl -sf http://127.0.0.1:8999/restapi/v4/cloud_accounts/report_import -X POST >> /var/log/optscale/report-import.log 2>&1
+0 * * * * root curl -sf "http://127.0.0.1:8999/restapi/v4/cloud_accounts/report_import?period=1" -X POST >> /var/log/optscale/report-import.log 2>&1
+0 */6 * * * root curl -sf "http://127.0.0.1:8999/restapi/v4/cloud_accounts/report_import?period=6" -X POST >> /var/log/optscale/report-import.log 2>&1
+0 0 * * * root curl -sf "http://127.0.0.1:8999/restapi/v4/cloud_accounts/report_import?period=24" -X POST >> /var/log/optscale/report-import.log 2>&1

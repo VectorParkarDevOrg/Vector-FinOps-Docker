@@ -6,7 +6,6 @@ import LoginForm from "components/forms/LoginForm";
 import RegistrationForm from "components/forms/RegistrationForm";
 import GoogleAuthButton from "components/GoogleAuthButton";
 import Greeter from "components/Greeter";
-import KeycloakSignInButton from "components/KeycloakSignInButton";
 import MicrosoftSignInButton from "components/MicrosoftSignInButton";
 import OAuthSignIn from "components/OAuthSignIn";
 import Redirector from "components/Redirector";
@@ -177,13 +176,6 @@ const AuthorizationContainer = () => {
                 }
                 microsoftButton={
                   <MicrosoftSignInButton
-                    handleSignIn={handleThirdPartySignIn}
-                    isLoading={signInLoading}
-                    disabled={loginLoading || registerLoading}
-                  />
-                }
-                keycloakButton={
-                  <KeycloakSignInButton
                     handleSignIn={handleThirdPartySignIn}
                     isLoading={signInLoading}
                     disabled={loginLoading || registerLoading}

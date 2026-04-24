@@ -1,0 +1,259 @@
+skip_config_update: false
+drop_tasks_db:
+databases:
+  - "auth-db"
+  - "my-db"
+  - "tasks"
+  - "herald"
+  - "katara"
+  - "slacker"
+  - "jira-bus"
+  - "subspector"
+etcd:
+  public_ip:
+  company_name: Vector
+  product_name: Vector FinOps
+  encryption_key: fffffxdddeadb33f
+  release:
+  katara_scheduler_timeout: 3600
+  bumi_scheduler_timeout: 300
+  bumi_worker:
+    max_retries: 5
+    wait_timeout: 7200
+    task_timeout: 3600
+    run_period: 10800
+  optscale_service_emails:
+    recipient:
+    enabled: false
+  optscale_error_emails:
+    recipient:
+    enabled: false
+  skip_email_filters:
+  google_calendar_service:
+    enabled: false
+    access_key:
+      auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs"
+      auth_uri: "https://accounts.google.com/o/oauth2/auth"
+      client_email: "calendar-service@optscale.iam.gserviceaccount.com"
+      client_id: ""
+      client_x509_cert_url: "https://www.googleapis.com/robot/v1/metadata/x509/calendar-service@optscale.iam.gserviceaccount.com"
+      private_key: "-----BEGIN PRIVATE KEY-----\n-----END PRIVATE KEY-----\n"
+      private_key_id: "eeee000"
+      project_id: "optscale"
+      token_uri: "https://oauth2.googleapis.com/token"
+      type: "service_account"
+  domains_blacklists:
+    new_employee_email:
+    registration:
+    failed_import_email:
+  domains_whitelists:
+    new_employee_email:
+    registration:
+    failed_import_email:
+  secret:
+    cluster: fc83d31-461d-44c5-b4d5-41a32d6c36a1
+    agent:
+  images_source:
+    host:
+    tag:
+  # --- Service endpoints (all on localhost within single container) ---
+  restapi:
+    invite_expiration_days: 30
+    host: 127.0.0.1
+    port: 8999
+    demo:
+      multiplier: 2
+    report_imports:
+      not_processed_threshold_secs: 10800
+      message_expiration_secs: 10800
+  auth:
+    host: 127.0.0.1
+    port: 8905
+  katara:
+    host: 127.0.0.1
+    port: 8935
+  herald:
+    host: 127.0.0.1
+    port: 8906
+  keeper:
+    host: 127.0.0.1
+    port: 8973
+  insider:
+    host: 127.0.0.1
+    port: 8945
+  slacker:
+    host: 127.0.0.1
+    port: 8960
+  jirabus:
+    host: 127.0.0.1
+    port: 8977
+  metroculus:
+    host: 127.0.0.1
+    port: 8969
+  thanos_query:
+    host: 127.0.0.1
+    port: 10902
+  thanos_receive:
+    host: 127.0.0.1
+    port: 19291
+    path: api/v1/receive
+  # --- Databases ---
+  authdb:
+    host: 127.0.0.1
+    user: root
+    password: my-password-01
+    db: auth-db
+  heralddb:
+    host: 127.0.0.1
+    user: root
+    password: my-password-01
+    db: herald
+  restdb:
+    host: 127.0.0.1
+    user: root
+    password: my-password-01
+    db: my-db
+    port: 3306
+  kataradb:
+    host: 127.0.0.1
+    user: root
+    password: my-password-01
+    db: katara
+  slackerdb:
+    host: 127.0.0.1
+    user: root
+    password: my-password-01
+    db: slacker
+    port: 3306
+  jirabusdb:
+    host: 127.0.0.1
+    user: root
+    password: my-password-01
+    db: jira-bus
+    port: 3306
+  subspectordb:
+    host: 127.0.0.1
+    user: root
+    password: my-password-01
+    db: subspector
+    port: 3306
+  mongo:
+    url: mongodb://root:SecurePassword-01-02@127.0.0.1:27017
+    database: keeper
+  influxdb:
+    host: 127.0.0.1
+    port: 8086
+    user:
+    pass:
+    database: metrics
+  rabbit:
+    user: optscale
+    pass: secure-password-here
+    host: 127.0.0.1
+    port: 5672
+  minio:
+    host: 127.0.0.1
+    port: 9000
+    access: optscale-minio
+    secret: secret_password
+  clickhouse:
+    host: 127.0.0.1
+    port: 8123
+    user: default
+    password: secure-password-1-clk
+    db: default
+  cleanmongodb:
+    chunk_size: 500
+    rows_limit: 10000
+    archive_enable:
+    file_max_rows: 10000
+  disable_email_verification: true
+  force_aws_edp_strip:
+  encryption_salt: my~encypt10n~s@lt
+  encryption_salt_auth:
+  certificates:
+    optscale:
+  logstash_port:
+  events_queue: events_queue
+  resources_discovery_cache_time:
+  overlay_list:
+  token_expiration: 168
+  users_dataset_generator:
+    enable: false
+    bucket:
+    s3_path:
+    filename:
+    aws_access_key_id:
+    aws_secret_access_key:
+  service_credentials:
+    alibaba:
+      access_key_id: accesskeyid
+      secret_access_key: secretaccesskey
+    aws:
+      access_key_id: accesskeyid
+      secret_access_key: secretaccesskey
+    azure:
+      client_id: clientid
+      secret: secret
+      subscription_id: subscriptionid
+      tenant: tenant
+    gcp:
+      credentials:
+        auth_provider_x509_cert_url: https://www.googleapis.com/oauth2/v1/certs
+        auth_uri: https://accounts.google.com/o/oauth2/auth
+        client_email: optscale-service-credentials@yourproject.iam.gserviceaccount.com
+        client_id: "111111111"
+        client_x509_cert_url: https://www.googleapis.com/robot/v1/metadata/x509/optscale-service-credentials%40yourproject.iam.gserviceaccount.com
+        private_key: |
+          -----BEGIN PRIVATE KEY-----
+          -----END PRIVATE KEY-----
+        private_key_id: yourprivatekeyid
+        project_id: yourprojectid
+        token_uri: https://oauth2.googleapis.com/token
+        type: service_account
+      pricing_data:
+        dataset_name: pricing_dataset
+        table_name: cloud_pricing_export
+      project_id: yourprojectid
+  smtp:
+    server:
+    email:
+    login:
+    port:
+    password:
+    protocol:
+  resource_discovery_settings:
+    discover_size: 10000
+    timeout:
+    writing_timeout: 60
+    observe_timeout: 7200
+    debug:
+  bi_settings:
+    exporter_run_period: 86400
+    encryption_key: 5t3X3PkQqF5edqW9_c8znow7k7GraZOpBLHhF1kFFvE=
+    task_wait_timeout: 259200
+  failed_imports_dataset_generator:
+    enable: false
+    bucket:
+    s3_path:
+    filename:
+    aws_access_key_id:
+    aws_secret_access_key:
+  subspector:
+    host: 127.0.0.1
+    port: 8800
+  password_strength_settings:
+    min_length:
+    min_lowercase:
+    min_uppercase:
+    min_digits:
+    min_special_chars:
+  demo_org_cleanup:
+    demo_org_lifetime_hrs:
+  diworker:
+    max_report_imports_workers: 10
+  exchange_rates:
+  stripe:
+    api_key:
+    webhook_secret:
+    enabled: false

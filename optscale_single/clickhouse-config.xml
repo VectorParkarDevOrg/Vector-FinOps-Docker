@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<yandex>
+    <logger>
+        <level>warning</level>
+        <console>1</console>
+    </logger>
+    <user_directories>
+        <users_xml>
+            <path>/etc/clickhouse-server/users.xml</path>
+        </users_xml>
+    </user_directories>
+    <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
+    <format_schema_path>/var/lib/clickhouse/format_schemas/</format_schema_path>
+    <http_port>8123</http_port>
+    <!-- TCP port changed from 9000 to 9001 to avoid conflict with MinIO :9000 -->
+    <tcp_port>9001</tcp_port>
+    <listen_host>0.0.0.0</listen_host>
+    <max_connections>1024</max_connections>
+    <keep_alive_timeout>3</keep_alive_timeout>
+    <max_concurrent_queries>50</max_concurrent_queries>
+    <!-- Reduced from 512MB to 128MB for low-memory deployments -->
+    <uncompressed_cache_size>134217728</uncompressed_cache_size>
+    <!-- Reduced from 256MB to 64MB -->
+    <mark_cache_size>67108864</mark_cache_size>
+    <path>/var/lib/clickhouse/</path>
+    <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
+    <default_profile>default</default_profile>
+    <default_database>default</default_database>
+    <max_session_timeout>3600</max_session_timeout>
+    <default_session_timeout>60</default_session_timeout>
+    <query_log replace="1">
+        <database>system</database>
+        <table>query_log</table>
+        <engine>Engine = MergeTree PARTITION BY event_date ORDER BY event_time TTL event_date + interval 5 day</engine>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+    </query_log>
+</yandex>

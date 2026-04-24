@@ -5,7 +5,7 @@ export const getReasonValue = (reason: Reason) =>
   (
     ({
       [REASONS.SAVINGS]: "The product does not give enough cost savings",
-      [REASONS.FEATURES]: "OptScale does not work as expected / not enough features",
+      [REASONS.FEATURES]: "Vector FinOps does not work as expected / not enough features",
       [REASONS.GOAL]: "I have achieved my goal and am not interested in it anymore",
       [REASONS.OTHER]: "Other"
     }) as const

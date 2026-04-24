@@ -1,0 +1,12 @@
+[mysqld]
+# Low-memory tuning for single-container deployment
+max_connections         = 128
+innodb_buffer_pool_size = 128M
+innodb_file_per_table   = 1
+innodb_file_format      = BARRACUDA
+innodb_large_prefix     = 1
+wait_timeout            = 28800
+explicit_defaults_for_timestamp = 1
+# Reduce logging overhead
+slow_query_log          = 0
+general_log             = 0

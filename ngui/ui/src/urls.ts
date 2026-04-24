@@ -551,9 +551,9 @@ export const getEditPowerScheduleUrl = (id: string) => EDIT_POWER_SCHEDULE.repla
 
 // External urls
 export const PRODUCTION = "https://www.parkar.in/vector";
-export const DEMO = "https://demo.optscale.com";
+export const DEMO = "https://www.parkar.in/vector";
 export const HYSTAX = "https://www.parkar.in/vector";
-export const HYSTAX_PRIVACY_POLICY = "https://hystax.com/privacy-policy/";
+export const HYSTAX_PRIVACY_POLICY = "https://www.parkar.in/privacy-policy";
 
 export const FINOPS = "https://finopsinpractice.org/";
 export const FINOPS_FEATURES = "https://finopsinpractice.org/finops-in-practice-features-for-optscale/";
@@ -614,9 +614,9 @@ export const NEBIUS_GET_FOLDER_REPORT = "https://nebius.com/il/docs/billing/oper
 export const DATABRICKS_CREATE_SERVICE_PRINCIPAL = "https://docs.databricks.com/en/dev-tools/authentication-oauth.html";
 
 // Emails
-export const EMAIL_SUPPORT = "support@hystax.com";
-export const EMAIL_SALES = "sales@hystax.com";
-export const EMAIL_INFO = "info@hystax.com";
+export const EMAIL_SUPPORT = "support@parkar.in";
+export const EMAIL_SALES = "sales@parkar.in";
+export const EMAIL_INFO = "info@parkar.in";
 
 export const isProduction = () => window.location.origin === PRODUCTION;
 export const isDemo = () => window.location.origin === DEMO;
@@ -631,4 +631,4 @@ export const WITH_LEGEND_QUERY_PARAMETER_NAME = "withLegend";
 
 export const APPLY_FILTER_BY_CATEGORY_QUERY_PARAMETER_NAME = "applyFilterByCategory";
 
-export const CONTACT_US_URL = "https://hystax.com/contact-us/";
+export const CONTACT_US_URL = "https://www.parkar.in/contact-us/";
